@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<title>Village Info Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a73e8">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f6f8;
+    -webkit-text-size-adjust: 100%;
+  }
+  .topbar {
+    background: #1a73e8;
+    color: #fff;
+    padding: 16px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .back-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 0 6px 0 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .back-btn svg { width: 22px; height: 22px; }
+
+  .floating-back-btn {
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: none;
+    color: #4fa3ff;
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+    cursor: pointer;
+    z-index: 50;
+    transition: transform 0.12s ease;
+  }
+  .floating-back-btn svg { width: 30px; height: 30px; }
+  .floating-back-btn.show { display: flex; }
+  .floating-back-btn:active {
+    transform: scale(0.92);
+  }
+
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 80px; }
+  .wrap.wide { max-width: 100%; padding: 16px 10px 80px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 10px;
+    text-align: center;
+  }
+  .stat-card .icon { font-size: 22px; }
+  .stat-card .num { font-size: 22px; font-weight: 700; color: #1a73e8; margin: 4px 0 2px; }
+  .stat-card .label { font-size: 12px; color: #666; }
+
+  .menu-list { display: flex; flex-direction: column; gap: 10px; }
+  .menu-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+  .menu-item .emoji { font-size: 20px; }
+  .menu-item .arrow { margin-left: auto; color: #bbb; }
+  .menu-item:active { background: #f0f4fb; }
+
+  .search-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+
+  .empty { color: #888; font-size: 13px; padding: 10px 16px; }
+
+  .placeholder { text-align: center; color: #999; font-size: 14px; padding: 40px 20px; }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-count { font-size: 13px; color: #fff; opacity: 0.9; white-space: nowrap; }
+  .export-icons { display: flex; gap: 6px; }
+  .icon-btn {
+    padding: 6px 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .icon-btn:active { background: rgba(255,255,255,0.3); }
+
+  /* Excel-style table */
+  .table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  table.data-table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+    font-size: 12px;
+  }
+  table.data-table th, table.data-table td {
+    border: 1px solid #e0e0e0;
+    padding: 7px 10px;
+    white-space: nowrap;
+    text-align: left;
+  }
+  table.data-table th { background: #eef2f9; color: #333; font-weight: 600; position: sticky; top: 0; }
+  table.data-table th .th-inner { display: flex; align-items: center; gap: 4px; }
+  table.data-table .filter-btn {
+    background: none; border: none; font-size: 11px; cursor: pointer; color: #888; padding: 2px;
+  }
+  table.data-table .filter-btn.active { color: #1a73e8; font-weight: 700; }
+  table.data-table td.serial-col { color: #888; text-align: center; }
+  table.data-table .edit-icon {
+    background: none;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  .filter-check-list { max-height: 45vh; overflow-y: auto; margin: 8px 0; }
+  .filter-check-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
+  .filter-check-row input { width: 18px; height: 18px; }
+  .filter-select-all { font-size: 13px; color: #1a73e8; background: none; border: none; padding: 4px 0; cursor: pointer; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 10; }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    z-index: 11;
+    padding: 18px 16px 24px;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 8px; }
+  .sheet-header h2 { font-size: 16px; margin: 0; flex: 1; }
+  .sheet-header .close { font-size: 22px; background: none; border: none; cursor: pointer; color: #666; }
+
+  .frow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .frow label { width: 95px; flex: none; font-size: 14px; color: #444; }
+  .frow input[type="text"], .frow input[type="email"], .frow select { flex: 1; padding: 9px 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+  .frow select[disabled] { background: #f0f0f0; color: #555; }
+  .serial-value { font-size: 15px; color: #1a73e8; font-weight: 600; }
+
+  .prof-options { display: flex; flex-wrap: wrap; gap: 10px 14px; flex: 1; }
+  .prof-options label { width: auto; display: flex; align-items: center; gap: 5px; font-size: 13px; color: #333; }
+  .prof-options input { width: 17px; height: 17px; }
+
+  .sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .sheet-actions button { flex: 1; padding: 13px; border-radius: 8px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; background: #fff; }
+  .sheet-actions .save-btn { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+
+  .msg { text-align: center; padding: 8px; font-size: 13px; border-radius: 5px; margin-bottom: 10px; display: none; }
+  .msg.success { background: #e6f4ea; color: #137333; display: block; }
+  .msg.error { background: #fce8e6; color: #c5221f; display: block; }
+
+  .footer-note { text-align: center; color: #aaa; font-size: 11px; margin-top: 20px; }
+  .settings-label { font-size: 13px; color: #666; margin: 4px 0 8px; }
+  .settings-hint { font-size: 12px; color: #999; margin-top: 6px; }
+
+  .sheet-header-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .sheet-header-actions button {
+    padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ccc; background: #fff; font-family: inherit;
+  }
+  .sheet-header-actions .hdr-save { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  .sheet-header-actions .hdr-close { background: #f1f3f4; color: #333; }
+  .sheet-header-actions .hdr-delete { background: #fce8e6; color: #c5221f; border-color: #fce8e6; }
+
+  .frow-triple {
+    display: flex; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0; align-items: flex-end;
+  }
+  .frow-triple .cell {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;
+  }
+  .frow-triple .cell label { width: auto; font-size: 12px; color: #666; }
+  .frow-triple .cell .serial-value {
+    padding: 4px 0; font-size: 16px; font-weight: 700; color: #1a73e8;
+    border: none; background: none;
+  }
+  .frow-triple .cell select,
+  .frow-triple .cell .select-like {
+    width: 100%; padding: 4px 18px 4px 0; font-size: 14px;
+    border: none; border-bottom: 1.5px solid #ddd; border-radius: 0;
+    background-color: transparent; font-family: inherit; color: #333;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 2px center;
+    cursor: pointer;
+  }
+  .frow-triple .cell select[disabled] { background-color: transparent; color: #555; opacity: 1; }
+  .select-like { text-align: left; display: block; }
+  .select-like.placeholder { color: #999; }
+
+  .village-sheet-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+    max-height: 55vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    border: 1px solid #e5e5e5; border-radius: 10px;
+  }
+  .village-sheet-cell {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 6px; font-size: 12.5px; line-height: 1.25;
+    border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0;
+    background: #fff; cursor: pointer; text-align: left; margin: 0;
+    font-family: inherit; color: #222;
+  }
+  .village-sheet-cell:nth-child(3n) { border-right: none; }
+  .village-sheet-cell .v-num {
+    flex: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #eef2f9; color: #1a73e8; font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .village-sheet-cell:active { background: #f5f8ff; }
+  .village-sheet-cell.selected { background: #eaf1fe; font-weight: 600; color: #1a73e8; }
+  .village-sheet-cell.selected .v-num { background: #1a73e8; color: #fff; }
+
+  .name-row-flex { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .name-row-flex input { flex: 1; }
+  .add-other-btn {
+    background: none; border: 1px solid #1a73e8; color: #1a73e8;
+    border-radius: 4px; font-size: 13px; font-weight: 700; line-height: 1;
+    cursor: pointer; padding: 1px 6px; margin: 0;
+  }
+
+  .others-pending-list { margin: 0 0 10px; padding: 0; }
+  .others-pending-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f5f8ff; border: 1px solid #e0e8fb; border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; margin-bottom: 6px; color: #333;
+  }
+  .others-pending-item .op-remove {
+    background: none; border: none; color: #c5221f; font-size: 16px; cursor: pointer; padding: 0 4px;
+  }
+
+  .informant-note { display: block; font-size: 10px; color: #888; margin-top: 2px; }
+
+  .lang-toggle { display: flex; gap: 8px; margin-bottom: 4px; }
+  .lang-btn {
+    flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1px solid #ccc; background: #fff; cursor: pointer; color: #333;
+  }
+  .lang-btn.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" id="backBtn" onclick="showView('home')" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M19 12H5M5 12L11 6M5 12L11 18" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <h1 id="pageTitle">Village Info</h1>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<button type="button" class="floating-back-btn" id="floatingBackBtn" onclick="emergencyGoHome()">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19 12H5M5 12L11 6M5 12L11 18" stroke="#4fa3ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<!-- HOME VIEW -->
+<div class="wrap" id="view-home">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="icon">👤</div><div class="num" id="statPeople">0</div><div class="label">Total People</div></div>
+    <div class="stat-card"><div class="icon">🏘️</div><div class="num" id="statVillages">0</div><div class="label">Total Villages</div></div>
+    <div class="stat-card"><div class="icon">🏛️</div><div class="num" id="statUnions">0</div><div class="label">Unions</div></div>
+    <div class="stat-card"><div class="icon">👥</div><div class="num" id="statGroups">0</div><div class="label">Groups</div></div>
+  </div>
+
+  <div class="menu-list">
+    <button class="menu-item" onclick="openSheet()"><span class="emoji">➕</span> Add Person <span class="arrow">›</span></button>
+    <button class="menu-item" onclick="showView('list')"><span class="emoji">📋</span> All People <span class="arrow">›</span></button>
+    <button class="menu-item" onclick="showView('search')"><span class="emoji">🔍</span> Search <span class="arrow">›</span></button>
+    <button class="menu-item" onclick="showView('settings')"><span class="emoji">⚙️</span> Settings <span class="arrow">›</span></button>
+  </div>
+  <div class="footer-note">All data stays on this phone. No internet needed.</div>
+</div>
+
+<!-- LIST VIEW -->
+<div class="wrap wide" id="view-list" style="display:none;">
+  <div id="listArea"><p class="empty">No data added yet.</p></div>
+</div>
+
+<!-- SEARCH VIEW -->
+<div class="wrap wide" id="view-search" style="display:none;">
+  <input type="text" class="search-input" id="searchInput" placeholder="Search by name, village, mobile, profession...">
+  <div id="searchArea"><p class="empty">Start typing to search.</p></div>
+</div>
+
+<!-- SETTINGS VIEW -->
+<div class="wrap" id="view-settings" style="display:none;">
+  <div class="settings-label" id="lblLanguage">App Language</div>
+  <div class="lang-toggle">
+    <button type="button" class="lang-btn" id="langBtnEn" onclick="setLanguage('en')">English</button>
+    <button type="button" class="lang-btn" id="langBtnBn" onclick="setLanguage('bn')">বাংলা</button>
+  </div>
+  <div class="settings-hint" style="margin-bottom:16px;" id="lblLanguageHint">Changes all labels across the app.</div>
+
+  <div class="settings-label" id="lblGmail">Your Gmail ID</div>
+  <div class="frow" style="border:none;">
+    <input type="email" id="gmailInput" placeholder="example@gmail.com">
+  </div>
+  <div class="sheet-actions" style="margin-top:10px;">
+    <button class="save-btn" id="gmailSaveBtn" style="flex:none; padding:10px 20px; border-radius:8px;" onclick="saveGmail()">Save</button>
+  </div>
+  <div class="settings-hint" id="lblGmailHint">This email is used with the "Share to Gmail" button. Sending the file needs internet only at that moment — everything else works offline.</div>
+</div>
+
+<!-- Bottom sheet (add / edit form) -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-header">
+    <h2 id="sheetTitle">Add Person</h2>
+    <div class="sheet-header-actions">
+      <button type="button" class="hdr-delete" id="deleteBtn" style="display:none;" onclick="deleteFromSheet()">Delete</button>
+      <button type="button" class="hdr-close" onclick="closeSheet()">Close</button>
+      <button type="button" class="hdr-save" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+
+  <div id="msgBox" class="msg"></div>
+
+  <div class="frow-triple">
+    <div class="cell">
+      <label>Serial</label>
+      <span class="serial-value" id="serialDisplay">01</span>
+    </div>
+    <div class="cell">
+      <label>Union</label>
+      <select id="union" disabled><option value="Patnitala" id="unionOption">Patnitala</option></select>
+    </div>
+    <div class="cell">
+      <label>Village</label>
+      <button type="button" class="select-like placeholder" id="villageFieldBtn" onclick="openVillageSheet()">Select</button>
+      <input type="hidden" id="village" value="">
+    </div>
+  </div>
+
+  <div class="frow">
+    <label id="lblName"><span id="lblNameText">Name</span> <button type="button" class="add-other-btn" id="addOtherBtn" onclick="openOtherSheet()">+</button></label>
+    <input type="text" id="name" placeholder="Full name">
+  </div>
+  <div id="othersPendingWrap"></div>
+  <div class="frow"><label id="lblFather">Father</label><input type="text" id="father" placeholder="Father's name"></div>
+  <div class="frow"><label id="lblMobile">Mobile</label><input type="text" id="mobile" inputmode="numeric" placeholder="Mobile number"></div>
+
+  <div class="frow">
+    <label id="lblProfession">Profession</label>
+    <div class="prof-options" id="profOptions">
+      <label><input type="checkbox" class="prof-check" value="Farmer"> Farmer</label>
+      <label><input type="checkbox" class="prof-check" value="Pump Owner"> Pump Owner</label>
+      <label><input type="checkbox" class="prof-check" value="Operator"> Operator</label>
+      <label><input type="checkbox" class="prof-check" value="Line Man"> Line Man</label>
+    </div>
+  </div>
+
+  <div class="frow"><label id="lblNid">NID</label><input type="text" id="nid" inputmode="numeric" placeholder="NID number"></div>
+  <div class="frow"><label id="lblGroupId">Group ID</label><input type="text" id="groupId" placeholder="Group ID"></div>
+
+
+</div>
+
+<!-- Add Other's Info sub-sheet -->
+<div class="overlay" id="otherOverlay" onclick="closeOtherSheet()" style="z-index:20;"></div>
+<div class="sheet" id="otherSheet" style="z-index:21;">
+  <div class="sheet-header">
+    <h2 id="otherSheetTitle">Add Other Person</h2>
+    <div class="sheet-header-actions">
+      <button type="button" class="hdr-close" onclick="closeOtherSheet()">Close</button>
+      <button type="button" class="hdr-save" onclick="saveOtherPending()">Save</button>
+    </div>
+  </div>
+  <div id="otherMsgBox" class="msg"></div>
+  <div class="frow">
+    <label id="lblRelation">Relation</label>
+    <select id="otherRelation">
+      <option value="Brother">Brother</option>
+      <option value="Son">Son</option>
+      <option value="Neighbor">Neighbor</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <div class="frow"><label id="lblOtherName">Name</label><input type="text" id="otherName" placeholder="Full name"></div>
+  <div class="frow"><label id="lblOtherMobile">Mobile</label><input type="text" id="otherMobile" inputmode="numeric" placeholder="Mobile number"></div>
+  <div class="frow">
+    <label id="lblOtherProfession">Profession</label>
+    <div class="prof-options" id="otherProfOptions">
+      <label><input type="checkbox" class="other-prof-check" value="Farmer"> Farmer</label>
+      <label><input type="checkbox" class="other-prof-check" value="Pump Owner"> Pump Owner</label>
+      <label><input type="checkbox" class="other-prof-check" value="Operator"> Operator</label>
+      <label><input type="checkbox" class="other-prof-check" value="Line Man"> Line Man</label>
+    </div>
+  </div>
+</div>
+
+<!-- Filter sheet -->
+<div class="overlay" id="filterOverlay" onclick="closeFilterSheet()"></div>
+<div class="sheet" id="filterSheet">
+  <div class="sheet-header">
+    <h2 id="filterSheetTitle">Filter</h2>
+    <button class="close" onclick="closeFilterSheet()">✕</button>
+  </div>
+  <button class="filter-select-all" onclick="toggleSelectAllFilter()">Select All / None</button>
+  <div class="filter-check-list" id="filterCheckList"></div>
+  <div class="sheet-actions">
+    <button onclick="resetFilter()">Clear Filter</button>
+    <button class="save-btn" onclick="applyFilterFromSheet()">Apply</button>
+  </div>
+</div>
+
+
+<div class="overlay" id="villageOverlay" onclick="closeVillageSheet()"></div>
+<div class="sheet" id="villageSheet">
+  <div class="sheet-header">
+    <h2>Select Village</h2>
+    <div class="sheet-header-actions">
+      <button type="button" class="hdr-close" onclick="closeVillageSheet()">Close</button>
+    </div>
+  </div>
+  <div class="village-sheet-grid" id="villageSheetGrid"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'villageInfoEntries';
+const GMAIL_KEY = 'villageInfoGmail';
+const LANG_KEY = 'villageInfoLang';
+
+const I18N = {
+  en: {
+    appTitle: 'Village Info',
+    homeTitle: 'Village Info', listTitle: 'All People', searchTitle: 'Search', settingsTitle: 'Settings',
+    statPeople: 'Total People', statVillages: 'Total Villages', statUnions: 'Unions', statGroups: 'Groups',
+    menuAdd: 'Add Person', menuList: 'All People', menuSearch: 'Search', menuSettings: 'Settings',
+    footerNote: 'All data stays on this phone. No internet needed.',
+    searchPlaceholder: 'Search by name, village, mobile, profession...',
+    startTyping: 'Start typing to search.',
+    noDataAdded: 'No data added yet.',
+    noDataFound: 'No data found.',
+    clearAllFilters: 'Clear all filters',
+    langLabel: 'App Language', langHint: 'Changes all labels across the app.',
+    gmailLabel: 'Your Gmail ID', gmailSave: 'Save',
+    gmailHint: 'This email is used with the "Share to Gmail" button. Sending the file needs internet only at that moment — everything else works offline.',
+    sheetTitleAdd: 'Add Person', sheetTitleEdit: 'Edit Person',
+    deleteBtn: 'Delete', closeBtn: 'Close', saveBtn: 'Save',
+    labelSerial: 'Serial', labelUnion: 'Union', labelVillage: 'Village', selectPlaceholder: 'Select',
+    emptyFilterLabel: '(empty)',
+    labelName: 'Name', namePh: 'Full name',
+    labelFather: 'Father', fatherPh: "Father's name",
+    labelMobile: 'Mobile', mobilePh: 'Mobile number',
+    labelProfession: 'Profession',
+    profFarmer: 'Farmer', profPumpOwner: 'Pump Owner', profOperator: 'Operator', profLineMan: 'Line Man',
+    labelNid: 'NID', nidPh: 'NID number',
+    labelGroupId: 'Group ID', groupIdPh: 'Group ID',
+    addOtherBtn: '+ Other', otherSheetTitle: 'Add Other Person',
+    labelRelation: 'Relation', relBrother: 'Brother', relSon: 'Son', relNeighbor: 'Neighbor', relOther: 'Other',
+    othersPendingCount: (n) => n + ' person(s) added',
+    informedByPrefix: 'Info given by: ',
+    colInformant: 'Informant', colRelation: 'Relation',
+    colSerial: 'Serial', colName: 'Name', colFather: 'Father', colVillage: 'Village',
+    colMobile: 'Mobile', colProfession: 'Profession', colNid: 'NID', colGroupId: 'Group ID',
+    filterSuffix: ' — Filter', selectAllNone: 'Select All / None', clearFilterBtn: 'Clear Filter', applyBtn: 'Apply',
+    selectVillageTitle: 'Select Village',
+    savedSuccess: 'Saved successfully', saveFailed: 'Save failed: ',
+    deleteConfirm: 'Delete this entry?',
+    noDataToExport: 'No data to export', noDataToShare: 'No data to share',
+    shareNotSupported: 'Direct sharing is not supported in this browser. First tap "Download Excel", then open Gmail and attach the file manually.',
+    gmailSaved: 'Gmail ID saved',
+    totalPrefix: 'Total ',
+    otherNameRequired: 'Please enter a name',
+    villageRequired: 'Please select a village'
+  },
+  bn: {
+    appTitle: 'গ্রাম তথ্য',
+    homeTitle: 'গ্রাম তথ্য', listTitle: 'সবার তালিকা', searchTitle: 'অনুসন্ধান', settingsTitle: 'সেটিংস',
+    statPeople: 'মোট মানুষ', statVillages: 'মোট গ্রাম', statUnions: 'ইউনিয়ন', statGroups: 'গ্রুপ',
+    menuAdd: 'ব্যক্তি যোগ করুন', menuList: 'সবার তালিকা', menuSearch: 'অনুসন্ধান', menuSettings: 'সেটিংস',
+    footerNote: 'সব তথ্য এই ফোনেই থাকবে। ইন্টারনেট প্রয়োজন নেই।',
+    searchPlaceholder: 'নাম, গ্রাম, মোবাইল, পেশা দিয়ে খুঁজুন...',
+    startTyping: 'খোঁজা শুরু করতে লিখুন।',
+    noDataAdded: 'এখনো কোনো তথ্য যোগ করা হয়নি।',
+    noDataFound: 'কোনো তথ্য পাওয়া যায়নি।',
+    clearAllFilters: 'সব ফিল্টার মুছুন',
+    langLabel: 'অ্যাপের ভাষা', langHint: 'পুরো অ্যাপের সব লেবেল বদলে যাবে।',
+    gmailLabel: 'আপনার জিমেইল আইডি', gmailSave: 'সেভ',
+    gmailHint: 'এই ইমেইলটি "Share to Gmail" বাটনের জন্য ব্যবহার হয়। ফাইল পাঠানোর সময়ই শুধু ইন্টারনেট লাগবে — বাকি সবকিছু অফলাইনে কাজ করে।',
+    sheetTitleAdd: 'ব্যক্তি যোগ করুন', sheetTitleEdit: 'তথ্য সম্পাদনা',
+    deleteBtn: 'মুছুন', closeBtn: 'বন্ধ', saveBtn: 'সেভ',
+    labelSerial: 'ক্রমিক', labelUnion: 'ইউনিয়ন', labelVillage: 'গ্রাম', selectPlaceholder: 'নির্বাচন করুন',
+    emptyFilterLabel: '(খালি)',
+    labelName: 'নাম', namePh: 'পূর্ণ নাম',
+    labelFather: 'পিতা', fatherPh: 'পিতার নাম',
+    labelMobile: 'মোবাইল', mobilePh: 'মোবাইল নম্বর',
+    labelProfession: 'পেশা',
+    profFarmer: 'কৃষক', profPumpOwner: 'পাম্প মালিক', profOperator: 'অপারেটর', profLineMan: 'লাইন ম্যান',
+    labelNid: 'এনআইডি', nidPh: 'এনআইডি নম্বর',
+    labelGroupId: 'গ্রুপ আইডি', groupIdPh: 'গ্রুপ আইডি',
+    addOtherBtn: '+ অন্যের তথ্য', otherSheetTitle: 'অন্যের তথ্য যোগ করুন',
+    labelRelation: 'সম্পর্ক', relBrother: 'ভাই', relSon: 'ছেলে', relNeighbor: 'প্রতিবেশী', relOther: 'অন্যান্য',
+    othersPendingCount: (n) => n + ' জনের তথ্য যোগ হয়েছে',
+    informedByPrefix: 'তথ্য দিয়েছেন: ',
+    colInformant: 'তথ্যদাতা', colRelation: 'সম্পর্ক',
+    colSerial: 'ক্রমিক', colName: 'নাম', colFather: 'পিতা', colVillage: 'গ্রাম',
+    colMobile: 'মোবাইল', colProfession: 'পেশা', colNid: 'এনআইডি', colGroupId: 'গ্রুপ আইডি',
+    filterSuffix: ' — ফিল্টার', selectAllNone: 'সব নির্বাচন/বাতিল', clearFilterBtn: 'ফিল্টার মুছুন', applyBtn: 'প্রয়োগ করুন',
+    selectVillageTitle: 'গ্রাম নির্বাচন করুন',
+    savedSuccess: 'সফলভাবে সেভ হয়েছে', saveFailed: 'সেভ ব্যর্থ হয়েছে: ',
+    deleteConfirm: 'এই তথ্যটি মুছবেন?',
+    noDataToExport: 'এক্সপোর্ট করার তথ্য নেই', noDataToShare: 'শেয়ার করার তথ্য নেই',
+    shareNotSupported: 'এই ব্রাউজারে সরাসরি শেয়ার করা যায় না। আগে "Download Excel" চাপুন, তারপর Gmail খুলে ফাইলটি সংযুক্ত করুন।',
+    gmailSaved: 'জিমেইল আইডি সেভ হয়েছে',
+    totalPrefix: 'মোট ',
+    otherNameRequired: 'নাম লিখুন',
+    villageRequired: 'গ্রাম নির্বাচন করুন'
+  }
+};
+let currentLang = localStorage.getItem(LANG_KEY) || 'bn';
+function t(key) { return I18N[currentLang][key]; }
+
+const villages = [
+  "Khorail","Rasulpur","Santosh Para","Balugha","Nandanpur","Chak Durgarayam",
+  "Bujurruk Mamudpur","Badram","Ajmatpur","Shambhupur-2","Shahajatpur",
+  "Chakram Narayan","Mathurapur","Kantabari","Biswaspur","Kuaron",
+  "Chak-Abdal","Kalyanpur","Patnitala","Maheshpur","Shambhupur-1","Ichhapur",
+  "Gokhura","Hasenbegpur","Bajitpur","Boram","Harpur"
+];
+const VILLAGE_BN = {
+  "Khorail": "খরাইল", "Rasulpur": "রসুলপুর", "Santosh Para": "সন্তোষ পাড়া",
+  "Balugha": "বালুঘা", "Nandanpur": "নন্দনপুর", "Chak Durgarayam": "চকদূর্গারায়াম",
+  "Bujurruk Mamudpur": "বুজরুক মামুদপুর", "Badram": "বাদরাম", "Ajmatpur": "আজমতপুর",
+  "Shambhupur-2": "শম্ভুপুর-২", "Shahajatpur": "শাহাজাতপুর", "Chakram Narayan": "চকরাম নারায়ন",
+  "Mathurapur": "মথুরাপুর", "Kantabari": "কাঁটাবাড়ী", "Biswaspur": "বিশ্বাসপুর",
+  "Kuaron": "কুয়ারন", "Chak-Abdal": "চক-আবদাল", "Kalyanpur": "কল্যানপুর",
+  "Patnitala": "পত্নীতলা", "Maheshpur": "মহেশপুর", "Shambhupur-1": "শম্ভুপুর-১",
+  "Ichhapur": "ইছাপুর", "Gokhura": "গখুরা", "Hasenbegpur": "হাসেনবেগপুর",
+  "Bajitpur": "বাজিতপুর", "Boram": "বোরাম", "Harpur": "হাড়পুর"
+};
+const UNION_BN = { "Patnitala": "পত্নীতলা" };
+
+// Village/union values are always STORED in English (so data stays consistent
+// regardless of language switches); these helpers only affect what's DISPLAYED.
+function villageLabel(v) {
+  if (!v) return '';
+  return (currentLang === 'bn' && VILLAGE_BN[v]) ? VILLAGE_BN[v] : v;
+}
+function unionLabel(v) {
+  if (!v) return '';
+  return (currentLang === 'bn' && UNION_BN[v]) ? UNION_BN[v] : v;
+}
+
+function openVillageSheet() {
+  const grid = document.getElementById('villageSheetGrid');
+  const current = document.getElementById('village').value;
+  const sorted = villages.slice().sort((a, b) => villageLabel(a).localeCompare(villageLabel(b)));
+  grid.innerHTML = sorted.map((v, i) => {
+    const sel = (current === v) ? ' selected' : '';
+    return '<button type="button" class="village-sheet-cell' + sel + '" onclick="selectVillage(\'' + v.replace(/'/g, "\\'") + '\')">' +
+      '<span class="v-num">' + pad2(i + 1) + '</span><span>' + villageLabel(v) + '</span></button>';
+  }).join('');
+  document.getElementById('villageOverlay').classList.add('open');
+  document.getElementById('villageSheet').classList.add('open');
+  updateFloatingBackBtn();
+}
+function closeVillageSheet() {
+  document.getElementById('villageOverlay').classList.remove('open');
+  document.getElementById('villageSheet').classList.remove('open');
+  resetSheetKeyboardOffset(document.getElementById('villageSheet'));
+  updateFloatingBackBtn();
+}
+function selectVillage(v) {
+  document.getElementById('village').value = v;
+  const btn = document.getElementById('villageFieldBtn');
+  btn.textContent = villageLabel(v);
+  btn.classList.remove('placeholder');
+  closeVillageSheet();
+}
+function setVillageField(v) {
+  document.getElementById('village').value = v || '';
+  const btn = document.getElementById('villageFieldBtn');
+  if (v) { btn.textContent = villageLabel(v); btn.classList.remove('placeholder'); }
+  else { btn.textContent = t('selectPlaceholder'); btn.classList.add('placeholder'); }
+}
+
+
+function pad2(n) { return n.toString().padStart(2, '0'); }
+
+let nextSerial = 1;
+let allEntries = [];
+let editingSerial = null; // null = adding new, otherwise editing this serial
+let othersPending = []; // temp list of "other person" entries collected while the sheet is open
+function getTitles() {
+  return { home: t('homeTitle'), list: t('listTitle'), search: t('searchTitle'), settings: t('settingsTitle') };
+}
+
+function getColumns() {
+  return [
+    { key: 'serial', label: t('colSerial') },
+    { key: 'name', label: t('colName') },
+    { key: 'father', label: t('colFather') },
+    { key: 'village', label: t('colVillage') },
+    { key: 'mobile', label: t('colMobile') },
+    { key: 'profession', label: t('colProfession') },
+    { key: 'nid', label: t('colNid') },
+    { key: 'groupId', label: t('colGroupId') },
+    { key: 'referredBy', label: t('colInformant') }
+  ];
+}
+let columnFilters = {}; // { colKey: Set(selectedValues) } — absent key = no filter on that column
+let activeFilterCol = null;
+
+function columnRawValue(entry, colKey) {
+  if (colKey === 'serial') return pad2(entry.serial);
+  return entry[colKey] || '';
+}
+
+function uniqueValuesForColumn(colKey) {
+  if (colKey === 'profession') {
+    const set = new Set();
+    allEntries.forEach(e => {
+      const profs = (e.profession || '').split(' / ').filter(Boolean);
+      if (profs.length === 0) set.add('');
+      else profs.forEach(p => set.add(p));
+    });
+    return Array.from(set);
+  }
+  const set = new Set(allEntries.map(e => columnRawValue(e, colKey)));
+  return Array.from(set);
+}
+
+function matchesFilters(entry) {
+  return Object.keys(columnFilters).every(col => {
+    const selected = columnFilters[col];
+    if (col === 'profession') {
+      const profs = (entry.profession || '').split(' / ').filter(Boolean);
+      if (profs.length === 0) return selected.has('');
+      return profs.some(p => selected.has(p));
+    }
+    return selected.has(columnRawValue(entry, col));
+  });
+}
+
+function getColumnFilteredEntries() {
+  if (Object.keys(columnFilters).length === 0) return allEntries;
+  return allEntries.filter(matchesFilters);
+}
+
+function openFilterSheet(colKey) {
+  activeFilterCol = colKey;
+  const col = getColumns().find(c => c.key === colKey);
+  document.getElementById('filterSheetTitle').textContent = col.label + t('filterSuffix');
+  const values = uniqueValuesForColumn(colKey);
+  const selected = columnFilters[colKey]; // undefined = all selected
+  const listEl = document.getElementById('filterCheckList');
+  listEl.innerHTML = values.map(v => {
+    const checked = !selected || selected.has(v);
+    let displayLabel = v === '' ? t('emptyFilterLabel') : v;
+    if (colKey === 'village') displayLabel = v === '' ? t('emptyFilterLabel') : villageLabel(v);
+    return `<div class="filter-check-row">
+      <input type="checkbox" class="filter-check" value="${encodeURIComponent(v)}" ${checked ? 'checked' : ''}>
+      <span>${displayLabel}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('filterOverlay').classList.add('open');
+  document.getElementById('filterSheet').classList.add('open');
+  updateFloatingBackBtn();
+}
+
+function closeFilterSheet() {
+  document.getElementById('filterOverlay').classList.remove('open');
+  document.getElementById('filterSheet').classList.remove('open');
+  resetSheetKeyboardOffset(document.getElementById('filterSheet'));
+  updateFloatingBackBtn();
+  activeFilterCol = null;
+}
+
+function toggleSelectAllFilter() {
+  const boxes = document.querySelectorAll('.filter-check');
+  const allChecked = Array.from(boxes).every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+}
+
+function applyFilterFromSheet() {
+  if (!activeFilterCol) return;
+  const boxes = Array.from(document.querySelectorAll('.filter-check'));
+  const checked = boxes.filter(b => b.checked).map(b => decodeURIComponent(b.value));
+  const total = boxes.length;
+  if (checked.length === total) {
+    delete columnFilters[activeFilterCol];
+  } else {
+    columnFilters[activeFilterCol] = new Set(checked);
+  }
+  closeFilterSheet();
+  renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+}
+
+function clearAllFilters() {
+  columnFilters = {};
+  renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+}
+
+function resetFilter() {
+  if (activeFilterCol) delete columnFilters[activeFilterCol];
+  closeFilterSheet();
+  renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveToStorage(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function showView(name) {
+  ['home','list','search','settings'].forEach(v => {
+    document.getElementById('view-' + v).style.display = (v === name) ? 'block' : 'none';
+  });
+  document.getElementById('pageTitle').textContent = getTitles()[name];
+  document.getElementById('backBtn').style.display = (name === 'home') ? 'none' : 'inline-block';
+  updateFloatingBackBtn();
+
+  const topbarRight = document.getElementById('topbarRight');
+  if (name === 'list') {
+    topbarRight.innerHTML = `<span class="header-count" id="headerCount">${t('totalPrefix')}0</span>
+      <div class="export-icons">
+        <button class="icon-btn" onclick="downloadCSV()" title="Download Excel">📊</button>
+        <button class="icon-btn" onclick="shareCSV()" title="Share to Gmail">📧</button>
+      </div>`;
+    renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+  } else {
+    topbarRight.innerHTML = '';
+  }
+
+  if (name === 'search') {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchInput').placeholder = t('searchPlaceholder');
+    document.getElementById('searchArea').innerHTML = '<p class="empty">' + t('startTyping') + '</p>';
+  }
+  if (name === 'settings') {
+    document.getElementById('gmailInput').value = localStorage.getItem(GMAIL_KEY) || '';
+  }
+}
+
+// ---- Floating back button: shows whenever we're off the home screen OR any sheet/overlay is stuck open ----
+function isAnyOverlayOpen() {
+  const ids = ['overlay','sheet','filterOverlay','filterSheet','villageOverlay','villageSheet','otherOverlay','otherSheet'];
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    return el && el.classList.contains('open');
+  });
+}
+function updateFloatingBackBtn() {
+  const btn = document.getElementById('floatingBackBtn');
+  const onHome = document.getElementById('view-home').style.display !== 'none';
+  const shouldShow = !onHome || isAnyOverlayOpen();
+  btn.classList.toggle('show', shouldShow);
+}
+// If a click/tap causes something to break, this force-closes every overlay/sheet and returns to the home screen.
+function emergencyGoHome() {
+  ['overlay','sheet','filterOverlay','filterSheet','villageOverlay','villageSheet','otherOverlay','otherSheet'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+  editingSerial = null;
+  othersPending = [];
+  activeFilterCol = null;
+  showView('home');
+}
+
+function showMsg(text, type) {
+  const box = document.getElementById('msgBox');
+  box.style.display = '';
+  box.textContent = text;
+  box.className = 'msg ' + type;
+  setTimeout(() => { box.style.display = 'none'; }, 2200);
+}
+
+function showOtherMsg(text, type) {
+  const box = document.getElementById('otherMsgBox');
+  box.style.display = '';
+  box.textContent = text;
+  box.className = 'msg ' + type;
+  setTimeout(() => { box.style.display = 'none'; }, 2200);
+}
+
+function nextAvailableSerial() {
+  if (allEntries.length === 0) return 1;
+  return Math.max(...allEntries.map(e => e.serial)) + 1;
+}
+
+// serial = undefined -> add mode. serial = number -> edit mode for that entry.
+function openSheet(serial) {
+  editingSerial = (serial === undefined) ? null : serial;
+  othersPending = [];
+  if (editingSerial === null) {
+    document.getElementById('sheetTitle').textContent = t('sheetTitleAdd');
+    document.getElementById('deleteBtn').style.display = 'none';
+    resetForm();
+    nextSerial = nextAvailableSerial();
+    document.getElementById('serialDisplay').textContent = pad2(nextSerial);
+  } else {
+    const entry = allEntries.find(e => e.serial === editingSerial);
+    if (!entry) return;
+    document.getElementById('sheetTitle').textContent = t('sheetTitleEdit');
+    document.getElementById('deleteBtn').style.display = 'block';
+    document.getElementById('serialDisplay').textContent = pad2(entry.serial);
+    setVillageField(entry.village || '');
+    document.getElementById('name').value = entry.name || '';
+    document.getElementById('father').value = entry.father || '';
+    document.getElementById('mobile').value = entry.mobile || '';
+    document.getElementById('nid').value = entry.nid || '';
+    document.getElementById('groupId').value = entry.groupId || '';
+    const profs = (entry.profession || '').split(' / ').filter(Boolean);
+    document.querySelectorAll('.prof-check').forEach(c => c.checked = profs.includes(c.value));
+  }
+  renderOthersPending();
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  updateFloatingBackBtn();
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  resetSheetKeyboardOffset(document.getElementById('sheet'));
+  updateFloatingBackBtn();
+  resetForm();
+  editingSerial = null;
+  othersPending = [];
+  renderOthersPending();
+}
+function resetForm() {
+  ['name','father','mobile','nid','groupId'].forEach(id => document.getElementById(id).value = '');
+  document.querySelectorAll('.prof-check').forEach(c => c.checked = false);
+  setVillageField('');
+}
+
+// ---- "Add Other's Info" mini-sheet ----
+function openOtherSheet() {
+  document.getElementById('otherRelation').value = 'Brother';
+  document.getElementById('otherName').value = '';
+  document.getElementById('otherMobile').value = '';
+  document.querySelectorAll('.other-prof-check').forEach(c => c.checked = false);
+  document.getElementById('otherOverlay').classList.add('open');
+  document.getElementById('otherSheet').classList.add('open');
+  updateFloatingBackBtn();
+}
+function closeOtherSheet() {
+  document.getElementById('otherOverlay').classList.remove('open');
+  document.getElementById('otherSheet').classList.remove('open');
+  resetSheetKeyboardOffset(document.getElementById('otherSheet'));
+  updateFloatingBackBtn();
+}
+function saveOtherPending() {
+  const name = document.getElementById('otherName').value.trim();
+  if (!name) { showOtherMsg(t('otherNameRequired'), 'error'); return; }
+  const professions = Array.from(document.querySelectorAll('.other-prof-check:checked')).map(c => c.value);
+  othersPending.push({
+    relation: document.getElementById('otherRelation').value,
+    name: name,
+    mobile: document.getElementById('otherMobile').value.trim(),
+    profession: professions.join(' / ')
+  });
+  renderOthersPending();
+  closeOtherSheet();
+}
+function removeOtherPending(idx) {
+  othersPending.splice(idx, 1);
+  renderOthersPending();
+}
+function relationLabel(rel) {
+  const map = { Brother: 'relBrother', Son: 'relSon', Neighbor: 'relNeighbor', Other: 'relOther' };
+  return t(map[rel] || 'relOther');
+}
+function renderOthersPending() {
+  const wrap = document.getElementById('othersPendingWrap');
+  if (othersPending.length === 0) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div class="others-pending-list">' + othersPending.map((o, i) => {
+    return `<div class="others-pending-item">
+      <span>${o.name} (${relationLabel(o.relation)})</span>
+      <button type="button" class="op-remove" onclick="removeOtherPending(${i})">✕</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function saveEntry() {
+  const villageVal = document.getElementById('village').value;
+  if (!villageVal) {
+    showMsg(t('villageRequired'), 'error');
+    return;
+  }
+
+  const professions = Array.from(document.querySelectorAll('.prof-check:checked')).map(c => c.value);
+  const data = {
+    union: document.getElementById('union').value,
+    village: villageVal,
+    name: document.getElementById('name').value.trim(),
+    father: document.getElementById('father').value.trim(),
+    mobile: document.getElementById('mobile').value.trim(),
+    profession: professions.join(' / '),
+    nid: document.getElementById('nid').value.trim(),
+    groupId: document.getElementById('groupId').value.trim(),
+  };
+
+  try {
+    let mainEntry;
+    if (editingSerial === null) {
+      mainEntry = Object.assign({ serial: nextAvailableSerial(), savedAt: new Date().toISOString() }, data);
+      allEntries.push(mainEntry);
+    } else {
+      const idx = allEntries.findIndex(e => e.serial === editingSerial);
+      if (idx !== -1) {
+        allEntries[idx] = Object.assign({}, allEntries[idx], data);
+        mainEntry = allEntries[idx];
+      }
+    }
+
+    if (mainEntry && othersPending.length > 0) {
+      if (!mainEntry.groupId) {
+        mainEntry.groupId = 'G' + pad2(mainEntry.serial);
+      }
+      othersPending.forEach(o => {
+        const father = (o.relation === 'Son') ? mainEntry.name : (mainEntry.father || '');
+        const otherEntry = {
+          serial: nextAvailableSerial(),
+          union: mainEntry.union,
+          village: mainEntry.village,
+          name: o.name,
+          father: father,
+          mobile: o.mobile,
+          profession: o.profession,
+          nid: '',
+          groupId: mainEntry.groupId,
+          referredBy: mainEntry.name,
+          relation: o.relation,
+          savedAt: new Date().toISOString()
+        };
+        allEntries.push(otherEntry);
+      });
+    }
+
+    saveToStorage(allEntries);
+    showMsg(t('savedSuccess'), 'success');
+    othersPending = [];
+    setTimeout(closeSheet, 400);
+    allEntries.sort((a, b) => a.serial - b.serial);
+    updateStats();
+    renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+  } catch (e) {
+    showMsg(t('saveFailed') + e.message, 'error');
+  }
+}
+
+function deleteFromSheet() {
+  if (editingSerial === null) return;
+  if (!confirm(t('deleteConfirm'))) return;
+  allEntries = allEntries.filter(e => e.serial !== editingSerial);
+  saveToStorage(allEntries);
+  updateStats();
+  renderTable(getColumnFilteredEntries(), 'listArea', 'headerCount');
+  closeSheet();
+}
+
+function renderTable(entries, areaId, countId) {
+  const listArea = document.getElementById(areaId);
+  if (countId) {
+    const countEl = document.getElementById(countId);
+    if (countEl) countEl.textContent = t('totalPrefix') + entries.length;
+  }
+  if (entries.length === 0) {
+    const hasFilters = (areaId === 'listArea') && Object.keys(columnFilters).length > 0;
+    listArea.innerHTML = '<p class="empty">' + t('noDataFound') + '</p>' +
+      (hasFilters ? '<button class="filter-select-all" onclick="clearAllFilters()">' + t('clearAllFilters') + '</button>' : '');
+    return;
+  }
+  const showFilters = (areaId === 'listArea');
+  let headerHtml = getColumns().map(col => {
+    if (!showFilters) return `<th>${col.label}</th>`;
+    const isActive = columnFilters.hasOwnProperty(col.key);
+    return `<th><div class="th-inner">${col.label}
+      <button class="filter-btn ${isActive ? 'active' : ''}" onclick="openFilterSheet('${col.key}')">▾</button>
+    </div></th>`;
+  }).join('') + '<th></th>';
+
+  let html = '<div class="table-wrap"><table class="data-table"><thead><tr>' + headerHtml + '</tr></thead><tbody>';
+  entries.forEach(e => {
+    const nameCell = (e.name || '') + (e.referredBy ? `<span class="informant-note">${t('informedByPrefix')}${e.referredBy}</span>` : '');
+    html += `<tr>
+      <td class="serial-col">${pad2(e.serial)}</td>
+      <td>${nameCell}</td>
+      <td>${e.father || ''}</td>
+      <td>${villageLabel(e.village)}</td>
+      <td>${e.mobile || ''}</td>
+      <td>${e.profession || ''}</td>
+      <td>${e.nid || ''}</td>
+      <td>${e.groupId || ''}</td>
+      <td>${e.referredBy || ''}</td>
+      <td><button class="edit-icon" onclick="openSheet(${e.serial})">✏️</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  listArea.innerHTML = html;
+}
+
+function updateStats() {
+  document.getElementById('statPeople').textContent = allEntries.length;
+  const villageSet = new Set(allEntries.map(e => e.village).filter(Boolean));
+  document.getElementById('statVillages').textContent = villageSet.size;
+  const unionSet = new Set(allEntries.map(e => e.union).filter(Boolean));
+  document.getElementById('statUnions').textContent = unionSet.size;
+  const groupSet = new Set(allEntries.map(e => e.groupId).filter(Boolean));
+  document.getElementById('statGroups').textContent = groupSet.size;
+}
+
+function applySearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const searchArea = document.getElementById('searchArea');
+  if (!q) {
+    searchArea.innerHTML = '<p class="empty">' + t('startTyping') + '</p>';
+    return;
+  }
+  const filtered = allEntries.filter(e => {
+    const fields = [e.name, e.father, e.mobile, e.village, villageLabel(e.village), e.union, unionLabel(e.union), e.profession, e.nid, e.groupId, e.referredBy, String(e.serial)];
+    return fields.some(f => (f || '').toString().toLowerCase().includes(q));
+  });
+  renderTable(filtered, 'searchArea', null);
+}
+document.getElementById('searchInput').addEventListener('input', applySearch);
+
+function saveGmail() {
+  const val = document.getElementById('gmailInput').value.trim();
+  localStorage.setItem(GMAIL_KEY, val);
+  alert(t('gmailSaved'));
+}
+
+function buildCSV() {
+  const headers = [t('colSerial'), t('labelUnion'), t('colVillage'), t('colName'), t('colFather'), t('colMobile'), t('colProfession'), t('colNid'), t('colGroupId'), t('colInformant')];
+  const rows = allEntries.map(e => [e.serial, unionLabel(e.union), villageLabel(e.village), e.name, e.father, e.mobile, e.profession, e.nid, e.groupId, e.referredBy]);
+  let csv = headers.join(',') + '\n';
+  rows.forEach(r => {
+    csv += r.map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(',') + '\n';
+  });
+  return csv;
+}
+
+function downloadCSV() {
+  if (allEntries.length === 0) { alert(t('noDataToExport')); return; }
+  const csv = buildCSV();
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'village_info.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function shareCSV() {
+  if (allEntries.length === 0) { alert(t('noDataToShare')); return; }
+  const csv = buildCSV();
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const file = new File([blob], 'village_info.csv', { type: 'text/csv' });
+  const gmail = localStorage.getItem(GMAIL_KEY) || '';
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: t('appTitle'),
+        text: gmail ? ('To: ' + gmail) : t('appTitle')
+      });
+    } catch (e) {
+      // user cancelled or share failed
+    }
+  } else {
+    alert(t('shareNotSupported'));
+  }
+}
+
+// ---- Apply current language to all static UI text ----
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.getElementById('pageTitle').textContent = t('appTitle');
+  document.title = t('appTitle');
+
+  document.querySelectorAll('.stat-card .label')[0].textContent = t('statPeople');
+  document.querySelectorAll('.stat-card .label')[1].textContent = t('statVillages');
+  document.querySelectorAll('.stat-card .label')[2].textContent = t('statUnions');
+  document.querySelectorAll('.stat-card .label')[3].textContent = t('statGroups');
+
+  const menuItems = document.querySelectorAll('.menu-item');
+  menuItems[0].childNodes[1].textContent = ' ' + t('menuAdd') + ' ';
+  menuItems[1].childNodes[1].textContent = ' ' + t('menuList') + ' ';
+  menuItems[2].childNodes[1].textContent = ' ' + t('menuSearch') + ' ';
+  menuItems[3].childNodes[1].textContent = ' ' + t('menuSettings') + ' ';
+  document.querySelector('.footer-note').textContent = t('footerNote');
+
+  document.getElementById('searchInput').placeholder = t('searchPlaceholder');
+
+  document.getElementById('lblLanguage').textContent = t('langLabel');
+  document.getElementById('lblLanguageHint').textContent = t('langHint');
+  document.getElementById('lblGmail').textContent = t('gmailLabel');
+  document.getElementById('gmailSaveBtn').textContent = t('gmailSave');
+  document.getElementById('lblGmailHint').textContent = t('gmailHint');
+  document.getElementById('langBtnEn').classList.toggle('active', currentLang === 'en');
+  document.getElementById('langBtnBn').classList.toggle('active', currentLang === 'bn');
+
+  document.getElementById('sheetTitle').textContent = (editingSerial === null) ? t('sheetTitleAdd') : t('sheetTitleEdit');
+  document.getElementById('deleteBtn').textContent = t('deleteBtn');
+  document.querySelector('#sheet .hdr-close').textContent = t('closeBtn');
+  document.querySelector('#sheet .hdr-save').textContent = t('saveBtn');
+  document.querySelector('#sheet .frow-triple .cell:nth-child(1) label').textContent = t('labelSerial');
+  document.querySelector('#sheet .frow-triple .cell:nth-child(2) label').textContent = t('labelUnion');
+  document.querySelector('#sheet .frow-triple .cell:nth-child(3) label').textContent = t('labelVillage');
+  document.getElementById('unionOption').textContent = unionLabel('Patnitala');
+  const vBtn = document.getElementById('villageFieldBtn');
+  if (vBtn.classList.contains('placeholder')) {
+    vBtn.textContent = t('selectPlaceholder');
+  } else {
+    vBtn.textContent = villageLabel(document.getElementById('village').value);
+  }
+  document.getElementById('lblNameText').textContent = t('labelName');
+  document.getElementById('name').placeholder = t('namePh');
+  document.getElementById('addOtherBtn').textContent = '+';
+  document.getElementById('lblFather').textContent = t('labelFather');
+  document.getElementById('father').placeholder = t('fatherPh');
+  document.getElementById('lblMobile').textContent = t('labelMobile');
+  document.getElementById('mobile').placeholder = t('mobilePh');
+  document.getElementById('lblProfession').textContent = t('labelProfession');
+  const profLabels = document.querySelectorAll('#profOptions label');
+  const profKeys = ['profFarmer','profPumpOwner','profOperator','profLineMan'];
+  profLabels.forEach((lbl, i) => { lbl.lastChild.textContent = ' ' + t(profKeys[i]); });
+  document.getElementById('lblNid').textContent = t('labelNid');
+  document.getElementById('nid').placeholder = t('nidPh');
+  document.getElementById('lblGroupId').textContent = t('labelGroupId');
+  document.getElementById('groupId').placeholder = t('groupIdPh');
+
+  document.getElementById('otherSheetTitle').textContent = t('otherSheetTitle');
+  document.querySelector('#otherSheet .hdr-close').textContent = t('closeBtn');
+  document.querySelector('#otherSheet .hdr-save').textContent = t('saveBtn');
+  document.getElementById('lblRelation').textContent = t('labelRelation');
+  const relSelect = document.getElementById('otherRelation');
+  Array.from(relSelect.options).forEach(opt => {
+    const map = { Brother: 'relBrother', Son: 'relSon', Neighbor: 'relNeighbor', Other: 'relOther' };
+    opt.textContent = t(map[opt.value]);
+  });
+  document.getElementById('lblOtherName').textContent = t('labelName');
+  document.getElementById('otherName').placeholder = t('namePh');
+  document.getElementById('lblOtherMobile').textContent = t('labelMobile');
+  document.getElementById('otherMobile').placeholder = t('mobilePh');
+  document.getElementById('lblOtherProfession').textContent = t('labelProfession');
+  const otherProfLabels = document.querySelectorAll('#otherProfOptions label');
+  otherProfLabels.forEach((lbl, i) => { lbl.lastChild.textContent = ' ' + t(profKeys[i]); });
+
+  document.querySelector('#filterSheet .filter-select-all').textContent = t('selectAllNone');
+  const filterActions = document.querySelectorAll('#filterSheet .sheet-actions button');
+  filterActions[0].textContent = t('clearFilterBtn');
+  filterActions[1].textContent = t('applyBtn');
+
+  document.querySelector('#villageSheet h2').textContent = t('selectVillageTitle');
+  document.querySelector('#villageSheet .hdr-close').textContent = t('closeBtn');
+
+  renderOthersPending();
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem(LANG_KEY, lang);
+  applyTranslations();
+  // re-render whichever view is currently visible so table headers/messages update too
+  const visible = ['home','list','search','settings'].find(v => document.getElementById('view-' + v).style.display !== 'none');
+  if (visible) showView(visible);
+}
+
+// ---- Keep open sheets above the on-screen keyboard on mobile ----
+// Some in-app WebViews don't resize the layout viewport or fire visualViewport
+// events when the keyboard opens, so a fixed-position sheet can end up hidden
+// behind the keyboard. Fix: while a field inside a sheet is focused, switch
+// that sheet from `position: fixed` to `position: absolute` at its current
+// screen location. This makes it part of normal page flow again, so the
+// browser's built-in "scroll focused field into view" behavior takes over
+// and reliably pushes it above the keyboard — regardless of whether the
+// WebView reports viewport/keyboard size changes to JavaScript at all.
+function freezeSheetPosition(sheet) {
+  if (sheet.dataset.kbFrozen === '1') return;
+  const rect = sheet.getBoundingClientRect();
+  sheet.style.position = 'absolute';
+  sheet.style.top = (window.scrollY + rect.top) + 'px';
+  sheet.style.bottom = 'auto';
+  sheet.style.left = '0';
+  sheet.style.right = '0';
+  sheet.dataset.kbFrozen = '1';
+}
+function unfreezeSheetPosition(sheet) {
+  sheet.style.position = '';
+  sheet.style.top = '';
+  sheet.style.bottom = '';
+  sheet.style.left = '';
+  sheet.style.right = '';
+  delete sheet.dataset.kbFrozen;
+}
+function resetSheetKeyboardOffset(sheet) {
+  unfreezeSheetPosition(sheet);
+}
+
+document.addEventListener('focusin', (e) => {
+  const tag = e.target.tagName;
+  if (tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA') return;
+  const sheet = e.target.closest && e.target.closest('.sheet');
+  if (!sheet) return;
+  freezeSheetPosition(sheet);
+  setTimeout(() => {
+    e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, 300);
+});
+
+document.addEventListener('focusout', (e) => {
+  const sheet = e.target.closest && e.target.closest('.sheet');
+  if (!sheet) return;
+  // wait a tick so we can see where focus landed next (another field in the
+  // same sheet should stay frozen; leaving the sheet entirely should unfreeze)
+  setTimeout(() => {
+    if (!sheet.contains(document.activeElement)) {
+      unfreezeSheetPosition(sheet);
+    }
+  }, 100);
+});
+
+function init() {
+  allEntries = loadFromStorage();
+  allEntries.sort((a, b) => a.serial - b.serial);
+  nextSerial = nextAvailableSerial();
+  document.getElementById('serialDisplay').textContent = pad2(nextSerial);
+  updateStats();
+  applyTranslations();
+  updateFloatingBackBtn();
+}
+init();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
