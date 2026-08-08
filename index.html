@@ -1502,6 +1502,14 @@ function setLanguage(lang) {
 }
 
 // ---- Keep open sheets above the on-screen keyboard on mobile ----
+// Some in-app WebViews don't resize the layout viewport or fire visualViewport
+// events when the keyboard opens, so a fixed-position sheet can end up hidden
+// behind the keyboard. Fix: while a field inside a sheet is focused, switch
+// that sheet from `position: fixed` to `position: absolute` at its current
+// screen location. This makes it part of normal page flow again, so the
+// browser's built-in "scroll focused field into view" behavior takes over
+// and reliably pushes it above the keyboard — regardless of whether the
+// WebView reports viewport/keyboard size changes to JavaScript at all.
 function freezeSheetPosition(sheet) {
   if (sheet.dataset.kbFrozen === '1') return;
   const rect = sheet.getBoundingClientRect();

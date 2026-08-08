@@ -1,24 +1,14 @@
 {
-  "name": "Village Info",
+  "name": "গ্রাম তথ্য - Village Info",
   "short_name": "Village Info",
-  "description": "Offline village data collection app",
+  "description": "গ্রামের মানুষের তথ্য সংগ্রহ ও পরিচালনার অ্যাপ",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6f8",
   "theme_color": "#1a73e8",
-  "orientation": "portrait",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
